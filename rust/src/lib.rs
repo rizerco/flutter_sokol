@@ -1,21 +1,14 @@
-#[unsafe(no_mangle)]
-pub extern "C" fn link_flutter() {
-    println!("link_flutter called");
-    // flutter_link::add_flutter_view();
-}
-
 use epoxy::types::GLint;
 use gdk::glib::Propagation;
 use gtk::Application;
 use gtk::ApplicationWindow;
-use gtk::Button;
-use gtk::glib::ExitCode;
 use gtk::prelude::*;
 use sokol::gfx::VertexFormat;
 use sokol::{app as sapp, gfx as sg, glue as sglue};
 use std::cell::RefCell;
 use std::ffi;
 
+mod flutter;
 mod shader;
 
 #[derive(Default)]
@@ -180,7 +173,7 @@ fn create_window(app: &Application) {
     //     randomize_clear_color();
     // });
 
-    let flutter_view = flutter_link::create_flutter_view() as *const gtk::Widget;
+    let flutter_view = flutter::create_flutter_view() as *const gtk::Widget;
     let flutter_view = &flutter_view as *const *const gtk::Widget;
     let flutter_view = unsafe { gtk::Widget::from_glib_ptr_borrow(flutter_view as _) };
 
@@ -193,69 +186,6 @@ fn create_window(app: &Application) {
 
     window.show_all();
 }
-
-// extern "C" fn init(user_data: *mut ffi::c_void) {
-//     let state = unsafe { &mut *(user_data as *mut State) };
-
-//     sg::setup(&sg::Desc {
-//         environment: sglue::environment(),
-//         logger: sg::Logger {
-//             func: Some(sokol::log::slog_func),
-//             ..Default::default()
-//         },
-//         ..Default::default()
-//     });
-
-//     state.pass_action.colors[0] = sg::ColorAttachmentAction {
-//         load_action: sg::LoadAction::Clear,
-//         clear_value: sg::Color {
-//             r: 1.0,
-//             g: 0.0,
-//             b: 0.0,
-//             a: 1.0,
-//         },
-//         ..Default::default()
-//     };
-
-//     let backend = sg::query_backend();
-//     match &backend {
-//         sg::Backend::Glcore | sg::Backend::Gles3 => {
-//             println!("Using GL Backend!");
-//             println!("Specifically the {:?} backend!", backend);
-//         }
-//         sg::Backend::D3d11 => {
-//             println!("Using D3d11 Backend!");
-//         }
-//         sg::Backend::MetalIos | sg::Backend::MetalMacos | sg::Backend::MetalSimulator => {
-//             println!("Using Metal Backend!");
-//             println!("Specifically the {:?} backend!", backend);
-//         }
-//         sg::Backend::Vulkan => {
-//             println!("Using Vulkan Backend!");
-//         }
-//         sg::Backend::Wgpu => {
-//             println!("Using Wgpu Backend!");
-//         }
-//         sg::Backend::Dummy => {
-//             println!("Using Dummy Backend!");
-//         }
-//     }
-// }
-
-// extern "C" fn frame(user_data: *mut ffi::c_void) {
-//     let state = unsafe { &mut *(user_data as *mut State) };
-
-//     let g = state.pass_action.colors[0].clear_value.g + 0.01;
-//     state.pass_action.colors[0].clear_value.g = if g > 1.0 { 0.0 } else { g };
-
-//     sg::begin_pass(&sg::Pass {
-//         action: state.pass_action,
-//         swapchain: sglue::swapchain(),
-//         ..Default::default()
-//     });
-//     sg::end_pass();
-//     sg::commit();
-// }
 
 extern "C" fn cleanup(user_data: *mut ffi::c_void) {
     sg::shutdown();
@@ -313,4 +243,10 @@ pub extern "C" fn launch_app() -> u8 {
     //     },
     //     ..Default::default()
     // });
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn link_flutter() {
+    println!("link_flutter called");
+    // flutter_link::add_flutter_view();
 }
