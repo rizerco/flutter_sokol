@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_sokol/src/ffi.g.dart';
 
 void main() {
-  link_flutter();
   runApp(const MyApp());
 }
 
@@ -31,14 +30,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,20 +38,8 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       backgroundColor: Colors.transparent,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: randomize_clear_color,
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ),

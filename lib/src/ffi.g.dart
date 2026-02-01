@@ -2,4 +2,4 @@
 import 'dart:ffi' as ffi;
 
 @ffi.Native<ffi.Void Function()>()
-external void link_flutter();
+external void randomize_clear_color();
