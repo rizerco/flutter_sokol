@@ -17,7 +17,7 @@ use std::sync::RwLock;
 mod flutter;
 mod shader;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct State {
     bind: sg::Bindings,
     pip: sg::Pipeline,
@@ -28,8 +28,12 @@ struct State {
 unsafe impl Send for State {}
 unsafe impl Sync for State {}
 
-static STATE: LazyLock<Arc<RwLock<State>>> =
-    LazyLock::new(|| Arc::new(RwLock::new(State::default())));
+// thread_local! {
+//     static STATE: RefCell<State> = RefCell::new(State::default());
+// }
+
+// static STATE: LazyLock<Arc<RwLock<State>>> =
+//     LazyLock::new(|| Arc::new(RwLock::new(State::default())));
 
 #[unsafe(no_mangle)]
 pub extern "C" fn set_up(app: *const *const gtk::Application) {
@@ -50,13 +54,23 @@ pub extern "C" fn set_up(app: *const *const gtk::Application) {
         });
     }
     let app = unsafe { gtk::Application::from_glib_ptr_borrow(app as *const *const _) };
+    // unsafe { app.set_data("state", State::default()) };
 
     create_window(app);
 }
 
-extern "C" fn init() {
-    // create vertex buffer with triangle vertices
-    let mut state = STATE.write().unwrap();
+fn state_from_pointer<'a>(state_pointer: usize) -> Option<&'a mut State> {
+    unsafe {
+        let state = state_pointer as *mut State;
+        state.as_mut()
+    }
+}
+
+extern "C" fn init(state_pointer: usize) {
+    let Some(state) = state_from_pointer(state_pointer) else {
+        return;
+    };
+
     state.bind.vertex_buffers[0] = sg::make_buffer(&sg::BufferDesc {
         #[rustfmt::skip]
         data: sg::value_as_range::<[f32; _]>(&[
@@ -79,15 +93,22 @@ extern "C" fn init() {
         },
         ..Default::default()
     });
+    println!("🌆 state: {:?}", state.pip.id);
 }
 
-extern "C" fn frame(area: &gtk::GLArea) {
+extern "C" fn frame(area: &gtk::GLArea, state_pointer: usize) {
     let mut framebuffer_id: GLint = 0;
     unsafe {
         epoxy::GetIntegerv(gl::FRAMEBUFFER_BINDING, &mut framebuffer_id);
     }
 
-    let mut state = STATE.write().unwrap();
+    let Some(state) = state_from_pointer(state_pointer) else {
+        return;
+    };
+    // let state = unsafe { state.as_mut() };
+    // println!("🌆 state: {:?}", state.pip.id);
+
+    // // let mut state = STATE.write().unwrap();
     state.swapchain.width = area.allocated_width();
     state.swapchain.height = area.allocated_height();
     state.swapchain.gl = sg::GlSwapchain {
@@ -114,13 +135,19 @@ fn create_window(app: &Application) {
     let window = ApplicationWindow::new(app);
     window.set_default_size(1000, 600);
 
+    let state = State::default();
+    let state = Box::new(state);
+    let state_pointer = &*state as *const State as usize;
+    println!("🥏 pointer {:?}", state_pointer);
+    unsafe { app.set_data("state", state) };
+
     gtk::init().unwrap();
     let gl_area = gtk::GLArea::new();
     gl_area.set_vexpand(true);
     gl_area.set_hexpand(true);
     gl_area.set_auto_render(true);
 
-    gl_area.connect_realize(|area| {
+    gl_area.connect_realize(move |area| {
         area.make_current();
 
         sg::setup(&sg::Desc {
@@ -139,14 +166,14 @@ fn create_window(app: &Application) {
             ..Default::default()
         });
         assert!(sg::isvalid());
-        init();
+        init(state_pointer);
     });
 
     gl_area.connect_render(move |area, _| {
         if !area.is_realized() {
             return Propagation::Stop;
         }
-        frame(area);
+        frame(area, state_pointer);
         Propagation::Proceed
     });
 
@@ -156,7 +183,7 @@ fn create_window(app: &Application) {
     button.set_margin_start(8);
     button.set_margin_top(8);
     button.connect_clicked(move |_| {
-        randomize_clear_color();
+        randomize_clear_color(state_pointer);
     });
 
     let flutter_view = flutter::create_flutter_view() as *const gtk::Widget;
@@ -180,8 +207,11 @@ extern "C" fn cleanup(user_data: *mut ffi::c_void) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn randomize_clear_color() {
-    let mut state = STATE.write().unwrap();
+pub extern "C" fn randomize_clear_color(state_pointer: usize) {
+    let Some(state) = state_from_pointer(state_pointer) else {
+        return;
+    };
+    // let mut state = STATE.write().unwrap();
     let mut rng = rand::rng();
     state.clear_color.r = rng.random_range(0.0..0.2);
     state.clear_color.g = rng.random_range(0.0..0.2);
