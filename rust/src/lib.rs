@@ -6,7 +6,6 @@ use gtk::prelude::*;
 use rand::Rng;
 use sokol::gfx as sg;
 use sokol::gfx::VertexFormat;
-use std::ffi;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
@@ -42,7 +41,6 @@ pub extern "C" fn set_up(app: *const *const gtk::Application) {
         });
     }
     let app = unsafe { gtk::Application::from_glib_ptr_borrow(app as *const *const _) };
-    // unsafe { app.set_data("state", State::default()) };
 
     create_window(app);
 }
@@ -81,8 +79,6 @@ extern "C" fn init(state_pointer: usize) {
         },
         ..Default::default()
     });
-    println!("🌆 state: {:?}", state_pointer);
-    println!("🌆 state: {:?}", state.pip.id);
 }
 
 extern "C" fn frame(area: &gtk::GLArea, state_pointer: usize) {
@@ -123,8 +119,8 @@ fn create_window(app: &Application) {
     let state = State::default();
     let state = Box::new(state);
     let state_pointer = &*state as *const State as usize;
-    println!("🥏 pointer {:?}", state_pointer);
     POINTER_ADDRESS.store(state_pointer, Ordering::SeqCst);
+    // Store the state in the app data so it doesn’t get dropped.
     unsafe { app.set_data("state", state) };
 
     gtk::init().unwrap();
@@ -163,15 +159,6 @@ fn create_window(app: &Application) {
         Propagation::Proceed
     });
 
-    let button = gtk::Button::with_label("Click me!");
-    button.set_halign(gtk::Align::Start);
-    button.set_valign(gtk::Align::Start);
-    button.set_margin_start(8);
-    button.set_margin_top(8);
-    button.connect_clicked(move |_| {
-        randomize_clear_color(state_pointer);
-    });
-
     let flutter_view = flutter::create_flutter_view() as *const gtk::Widget;
     let flutter_view = &flutter_view as *const *const gtk::Widget;
     let flutter_view = unsafe { gtk::Widget::from_glib_ptr_borrow(flutter_view as _) };
@@ -179,17 +166,10 @@ fn create_window(app: &Application) {
     let overlay = gtk::Overlay::new();
     overlay.add_overlay(&gl_area);
     overlay.add_overlay(flutter_view);
-    overlay.add_overlay(&button);
 
     window.add(&overlay);
 
     window.show_all();
-}
-
-extern "C" fn cleanup(user_data: *mut ffi::c_void) {
-    sg::shutdown();
-
-    let _ = unsafe { Box::from_raw(user_data as *mut State) };
 }
 
 #[unsafe(no_mangle)]
@@ -197,7 +177,6 @@ pub extern "C" fn randomize_clear_color(state_pointer: usize) {
     let Some(state) = state_from_pointer(state_pointer) else {
         return;
     };
-    // let mut state = STATE.write().unwrap();
     let mut rng = rand::rng();
     state.clear_color.r = rng.random_range(0.0..0.2);
     state.clear_color.g = rng.random_range(0.0..0.2);

@@ -11,11 +11,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Flutter Sokol',
       theme: ThemeData(
         colorScheme: .fromSeed(seedColor: Colors.deepPurple, brightness: .dark),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Flutter Sokol'),
     );
   }
 }
@@ -36,7 +36,6 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     address = state_pointer();
-    print('🍖 address $address');
   }
 
   @override
@@ -49,8 +48,8 @@ class _MyHomePageState extends State<MyHomePage> {
       backgroundColor: Colors.transparent,
       floatingActionButton: FloatingActionButton(
         onPressed: () => randomize_clear_color(address),
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        tooltip: 'Change Background Colour',
+        child: const Icon(Icons.replay),
       ),
     );
   }
