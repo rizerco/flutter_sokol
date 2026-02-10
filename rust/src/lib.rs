@@ -1,21 +1,19 @@
 use epoxy::types::GLint;
 use gdk::glib::Propagation;
-use glib::types::StaticType;
 use gtk::Application;
 use gtk::ApplicationWindow;
 use gtk::prelude::*;
 use rand::Rng;
 use sokol::gfx as sg;
 use sokol::gfx::VertexFormat;
-use std::cell::RefCell;
 use std::ffi;
-use std::ptr::NonNull;
-use std::sync::Arc;
-use std::sync::LazyLock;
-use std::sync::RwLock;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 mod flutter;
 mod shader;
+
+static POINTER_ADDRESS: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Default, Debug)]
 struct State {
@@ -24,16 +22,6 @@ struct State {
     swapchain: sg::Swapchain,
     clear_color: sg::Color,
 }
-
-unsafe impl Send for State {}
-unsafe impl Sync for State {}
-
-// thread_local! {
-//     static STATE: RefCell<State> = RefCell::new(State::default());
-// }
-
-// static STATE: LazyLock<Arc<RwLock<State>>> =
-//     LazyLock::new(|| Arc::new(RwLock::new(State::default())));
 
 #[unsafe(no_mangle)]
 pub extern "C" fn set_up(app: *const *const gtk::Application) {
@@ -93,6 +81,7 @@ extern "C" fn init(state_pointer: usize) {
         },
         ..Default::default()
     });
+    println!("🌆 state: {:?}", state_pointer);
     println!("🌆 state: {:?}", state.pip.id);
 }
 
@@ -105,10 +94,6 @@ extern "C" fn frame(area: &gtk::GLArea, state_pointer: usize) {
     let Some(state) = state_from_pointer(state_pointer) else {
         return;
     };
-    // let state = unsafe { state.as_mut() };
-    // println!("🌆 state: {:?}", state.pip.id);
-
-    // // let mut state = STATE.write().unwrap();
     state.swapchain.width = area.allocated_width();
     state.swapchain.height = area.allocated_height();
     state.swapchain.gl = sg::GlSwapchain {
@@ -139,6 +124,7 @@ fn create_window(app: &Application) {
     let state = Box::new(state);
     let state_pointer = &*state as *const State as usize;
     println!("🥏 pointer {:?}", state_pointer);
+    POINTER_ADDRESS.store(state_pointer, Ordering::SeqCst);
     unsafe { app.set_data("state", state) };
 
     gtk::init().unwrap();
@@ -216,4 +202,9 @@ pub extern "C" fn randomize_clear_color(state_pointer: usize) {
     state.clear_color.r = rng.random_range(0.0..0.2);
     state.clear_color.g = rng.random_range(0.0..0.2);
     state.clear_color.b = rng.random_range(0.0..0.2);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn state_pointer() -> usize {
+    POINTER_ADDRESS.load(Ordering::SeqCst)
 }

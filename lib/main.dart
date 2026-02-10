@@ -30,6 +30,15 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  late int address;
+
+  @override
+  void initState() {
+    super.initState();
+    address = state_pointer();
+    print('🍖 address $address');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,7 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       backgroundColor: Colors.transparent,
       floatingActionButton: FloatingActionButton(
-        onPressed: randomize_clear_color,
+        onPressed: () => randomize_clear_color(address),
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ),
