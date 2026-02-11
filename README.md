@@ -19,3 +19,7 @@ I’m using Rust in my current project that this experiment is for. But you coul
 ## Why are you passing around a memory address?
 
 We could wrap the state object in an `Arc<Mutex<>>`, but this means that we always need to get a lock, even when calling from within Rust. When you need to do this every frame, you run into performance issues. So instead, I’m storing the address in an `AtomicUsize`, which Flutter only has to access once and then can store for all future requests. It’s very unsafe, yes, but it’s also fast.
+
+## Where is my_application.cc?
+
+Gone! I ripped out the standard Flutter Linux C++ set-up code, and replaced it with Rust and a little bit of C to link in with the build system. Calling `flutter run` will still work and you still get hot-reload. I’ve not set up method channels, so they’ll just fail, but it would be possible to add them back if needed.
